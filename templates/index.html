@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SupportSense - Customer Feedback Classification & Triage</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">SupportSense</h1>
+          <p class="brand-subtitle">Customer Feedback Sentiment & Urgent Triage Assistant</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="status-indicator live"></span>
+        <span class="status-text">Pipeline: <strong>TF-IDF + Logistic Regression</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Top Grid: Interactive Classifier & Model Specs -->
+    <div class="dashboard-grid">
+      <!-- Left Column: Feedback Input & Live Prediction -->
+      <section class="card input-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="step-badge">1</span>
+            <div>
+              <h2 class="card-title">Analyze Incoming Feedback</h2>
+              <p class="card-description">Paste customer message or choose a demonstration scenario below.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Demonstration Chips -->
+        <div class="sample-chips-container">
+          <span class="sample-label">Quick Scenarios:</span>
+          <div class="chips-list">
+            <button type="button" class="chip" data-sample="Our server has been down for 2 hours and we are losing clients! Immediate help needed ASAP.">
+              🚨 Urgent Outage
+            </button>
+            <button type="button" class="chip" data-sample="I was charged twice on my credit card without authorization. I demand a full refund immediately.">
+              💳 Billing Dispute
+            </button>
+            <button type="button" class="chip" data-sample="How do I invite external team members and configure SSO authentication?">
+              ❓ How-To Inquiry
+            </button>
+            <button type="button" class="chip" data-sample="Sarah resolved my issue in under ten minutes! Outstanding and friendly customer care.">
+              ⭐ Positive Praise
+            </button>
+          </div>
+        </div>
+
+        <!-- Feedback Form -->
+        <form id="analyze-form" class="feedback-form">
+          <div class="form-group">
+            <div class="textarea-header">
+              <label for="feedback-input" class="input-label">Customer Message Text</label>
+              <span id="char-counter" class="char-counter">0 / 2000</span>
+            </div>
+            <textarea
+              id="feedback-input"
+              name="text"
+              class="feedback-textarea"
+              placeholder="e.g. 'We cannot access our account and our team is missing a critical client deadline! Please assist urgently.'"
+              rows="5"
+              maxlength="2000"
+              required
+            ></textarea>
+            <div id="validation-error" class="validation-message" style="display: none;"></div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="clear-btn" class="btn btn-secondary">Clear Input</button>
+            <button type="submit" id="submit-btn" class="btn btn-primary">
+              <span class="btn-spinner" style="display: none;"></span>
+              <span class="btn-text">Classify & Evaluate Priority</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- Prediction Result Container (Rendered dynamically) -->
+        <div id="result-container" class="result-container" style="display: none;">
+          <hr class="divider">
+          <h3 class="section-title">Prediction & Triage Results</h3>
+
+          <!-- Sentiment & Confidence -->
+          <div class="result-summary-box">
+            <div class="sentiment-badge-wrapper">
+              <span class="result-label">Predicted Sentiment:</span>
+              <span id="result-sentiment-badge" class="sentiment-badge badge-neutral">Neutral</span>
+            </div>
+            <div class="confidence-stat">
+              <span class="result-label">Confidence:</span>
+              <strong id="result-confidence-text" class="confidence-value">0.0%</strong>
+            </div>
+          </div>
+
+          <!-- Probability Distribution Bars -->
+          <div class="probabilities-section">
+            <span class="sub-label">Model Class Probabilities:</span>
+            <div class="prob-bars">
+              <div class="prob-row">
+                <span class="prob-label">Negative</span>
+                <div class="prob-track">
+                  <div id="prob-bar-negative" class="prob-fill fill-negative" style="width: 0%;"></div>
+                </div>
+                <span id="prob-val-negative" class="prob-value">0%</span>
+              </div>
+              <div class="prob-row">
+                <span class="prob-label">Neutral</span>
+                <div class="prob-track">
+                  <div id="prob-bar-neutral" class="prob-fill fill-neutral" style="width: 0%;"></div>
+                </div>
+                <span id="prob-val-neutral" class="prob-value">0%</span>
+              </div>
+              <div class="prob-row">
+                <span class="prob-label">Positive</span>
+                <div class="prob-track">
+                  <div id="prob-bar-positive" class="prob-fill fill-positive" style="width: 0%;"></div>
+                </div>
+                <span id="prob-val-positive" class="prob-value">0%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Key N-grams Identified -->
+          <div id="top-features-wrapper" class="top-features-wrapper">
+            <span class="sub-label">Influential Input Terms (TF-IDF):</span>
+            <div id="top-features-list" class="feature-tags-list"></div>
+          </div>
+
+          <!-- Priority Triage Rule Banner (Transparent Heuristic) -->
+          <div id="priority-banner" class="priority-banner priority-normal">
+            <div class="priority-banner-header">
+              <div class="priority-title-group">
+                <span id="priority-icon" class="priority-icon">🛡️</span>
+                <div>
+                  <h4 id="priority-heading" class="priority-heading">Priority: Normal</h4>
+                  <span class="transparency-note">Rule-Based Heuristic Evaluation &bull; Transparent Audit</span>
+                </div>
+              </div>
+              <span id="priority-pill" class="priority-pill pill-normal">Standard Queue</span>
+            </div>
+
+            <!-- Priority Explanations -->
+            <div class="priority-details">
+              <div class="priority-reasons-block">
+                <strong>Why was this priority assigned?</strong>
+                <ul id="priority-reasons-list" class="priority-reasons-list"></ul>
+              </div>
+
+              <div class="priority-action-block">
+                <strong>Recommended Human Action:</strong>
+                <p id="priority-action-text" class="priority-action-text"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Model Performance & Transparency -->
+      <section class="card metrics-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="step-badge">2</span>
+            <div>
+              <h2 class="card-title">Test Performance & Limitations</h2>
+              <p class="card-description">Metrics computed strictly on held-out test data (never training data).</p>
+            </div>
+          </div>
+        </div>
+
+        {% if metrics and metrics.held_out_test_metrics %}
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <span class="metric-label">Held-out Test Accuracy</span>
+            <span class="metric-number">{{ (metrics.held_out_test_metrics.accuracy * 100) | round(1) }}%</span>
+            <span class="metric-sub">{{ metrics.split.test_samples }} Unseen Samples</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Macro F1-Score</span>
+            <span class="metric-number">{{ (metrics.held_out_test_metrics.macro_f1 * 100) | round(1) }}%</span>
+            <span class="metric-sub">Balanced Harmonic Mean</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Macro Precision</span>
+            <span class="metric-number">{{ (metrics.held_out_test_metrics.macro_precision * 100) | round(1) }}%</span>
+            <span class="metric-sub">Across 3 Classes</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Macro Recall</span>
+            <span class="metric-number">{{ (metrics.held_out_test_metrics.macro_recall * 100) | round(1) }}%</span>
+            <span class="metric-sub">Sensitivity Rate</span>
+          </div>
+        </div>
+
+        <!-- Class Breakdown Table -->
+        <div class="table-container">
+          <h4 class="sub-label">Per-Class Held-Out Test Breakdown:</h4>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1-Score</th>
+                <th>Test Support</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for label, vals in metrics.held_out_test_metrics.per_class.items() %}
+              <tr>
+                <td><strong class="class-label-{{ label }}">{{ label | capitalize }}</strong></td>
+                <td>{{ (vals.precision * 100) | round(1) }}%</td>
+                <td>{{ (vals.recall * 100) | round(1) }}%</td>
+                <td>{{ (vals.f1_score * 100) | round(1) }}%</td>
+                <td>{{ vals.support }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+          Metrics not yet generated. Please run <code>python train.py</code>.
+        </div>
+        {% endif %}
+
+        <!-- Transparent Priority Rule Specs -->
+        <div class="rules-spec-box">
+          <h4 class="sub-label">Transparent Urgency Rule Specifications:</h4>
+          <ul class="rule-bullets">
+            <li><strong>Tier 1 (Critical):</strong> Outages, data breach, chargeback, lawsuits, fraud trigger <em>Urgent</em> regardless of sentiment.</li>
+            <li><strong>Tier 2 (Escalation):</strong> Terms like <em>urgent</em>, <em>asap</em>, <em>escalate</em>, <em>manager</em> trigger <em>Urgent</em> when sentiment is negative or neutral.</li>
+            <li><strong>Tier 3 (Churn / Dissatisfaction):</strong> Cancellation threats or demanding refunds combined with negative sentiment trigger <em>Urgent</em>.</li>
+            <li><em>Note:</em> Urgency is explicitly rule-driven for human auditability and is <strong>not</strong> an uninterpretable black-box model.</li>
+          </ul>
+        </div>
+
+        <!-- Dataset Limitations Box -->
+        <div class="limitations-box">
+          <h4 class="sub-label">Dataset Limitations & Scope:</h4>
+          <ul class="limitations-list">
+            <li>Demonstration benchmark with 150 customer support records (80% train, 20% test).</li>
+            <li>Trained on technical, billing, and software support queries. Out-of-domain conversational text may have degraded accuracy.</li>
+            <li>Sarcasm and subtle rhetorical phrasing may require human operator discretion.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- Bottom Section: Current Session Messages Log -->
+    <section class="card history-card">
+      <div class="history-header">
+        <div>
+          <h2 class="card-title">Current Session Feedback Log</h2>
+          <p class="card-description">
+            Messages classified during this browser session.
+          </p>
+        </div>
+        <button type="button" id="clear-history-btn" class="btn btn-outline btn-sm">Clear Session History</button>
+      </div>
+
+      <!-- Prominent Non-Persistence Notice -->
+      <div class="alert alert-notice">
+        <div class="notice-icon">⚠️</div>
+        <div class="notice-body">
+          <strong>Non-Persistent Session Storage:</strong>
+          <span>The messages listed below are stored solely in temporary session memory. No database is connected and no data is permanently saved on disk or sent to external cloud servers. All records will reset when you clear your browser session or restart the application.</span>
+        </div>
+      </div>
+
+      <div class="history-list-wrapper">
+        <div id="empty-history" class="empty-state" {% if session_history and session_history | length > 0 %}style="display: none;"{% endif %}>
+          <div class="empty-icon">📥</div>
+          <p class="empty-title">No feedback submitted yet in this session.</p>
+          <p class="empty-sub">Type or select a message above and click <strong>Classify & Evaluate Priority</strong> to get started.</p>
+        </div>
+
+        <div id="history-items-container" class="history-items">
+          {% for item in session_history %}
+          <div class="history-item {% if item.is_urgent %}item-urgent{% endif %}" id="{{ item.id }}">
+            <div class="item-meta">
+              <span class="item-time">{{ item.timestamp }}</span>
+              <div class="item-badges">
+                <span class="sentiment-badge badge-{{ item.sentiment }}">{{ item.sentiment | capitalize }} ({{ (item.confidence * 100) | round(1) }}%)</span>
+                <span class="priority-pill {% if item.is_urgent %}pill-urgent{% else %}pill-normal{% endif %}">
+                  {{ item.priority }}
+                </span>
+              </div>
+            </div>
+            <p class="item-text">{{ item.text }}</p>
+            {% if item.reasons %}
+            <div class="item-reasons">
+              <span class="reasons-label">Triage Audit:</span>
+              <span class="reasons-content">{{ item.reasons | join(' • ') }}</span>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <p>SupportSense &bull; Educational & Beginner-Friendly Customer Feedback Classification</p>
+      <p class="footer-sub">Built with Flask & scikit-learn &bull; Open-Source MIT License</p>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

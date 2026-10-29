@@ -1,0 +1,71 @@
+{
+  "timestamp": "2026-10-29T09:47:23.835962+00:00",
+  "model_architecture": "TF-IDF Vectorizer (ngram 1-2, sublinear_tf) + LogisticRegression (class_weight='balanced')",
+  "dataset_name": "SupportSense Customer Feedback Demonstration Dataset",
+  "dataset_license": "MIT License (Synthetic representative domain benchmark)",
+  "split": {
+    "total_samples": 150,
+    "train_samples": 120,
+    "test_samples": 30,
+    "test_ratio": 0.2,
+    "random_state": 42,
+    "stratified": true
+  },
+  "held_out_test_metrics": {
+    "accuracy": 0.7333,
+    "macro_precision": 0.7333,
+    "macro_recall": 0.7333,
+    "macro_f1": 0.7333,
+    "weighted_precision": 0.7333,
+    "weighted_recall": 0.7333,
+    "weighted_f1": 0.7333,
+    "labels": [
+      "negative",
+      "neutral",
+      "positive"
+    ],
+    "per_class": {
+      "negative": {
+        "precision": 0.8,
+        "recall": 0.8,
+        "f1_score": 0.8,
+        "support": 10
+      },
+      "neutral": {
+        "precision": 0.8,
+        "recall": 0.8,
+        "f1_score": 0.8,
+        "support": 10
+      },
+      "positive": {
+        "precision": 0.6,
+        "recall": 0.6,
+        "f1_score": 0.6,
+        "support": 10
+      }
+    },
+    "confusion_matrix": [
+      [
+        8,
+        0,
+        2
+      ],
+      [
+        0,
+        8,
+        2
+      ],
+      [
+        2,
+        2,
+        6
+      ]
+    ]
+  },
+  "limitations": [
+    "Dataset is a compact demonstration set (150 representative tickets across positive, neutral, negative categories).",
+    "Domain specific to SaaS, billing, and technical customer support queries; out-of-domain conversational text may produce uncertain confidence.",
+    "Subtle sarcasm, mixed sentiment paragraphs, and colloquial slang might be misclassified.",
+    "Heuristic priority flags are rule-driven keyword/sentiment combinations, NOT a dedicated supervised urgency classifier."
+  ]
+}
